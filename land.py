@@ -78,3 +78,6 @@ def find_download_images():
                     download_image(i['objectNumber'])
                 except:
                     pass
+
+if __name__ == '__main__':
+	find_download_images()
