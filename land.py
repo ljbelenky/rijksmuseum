@@ -16,7 +16,7 @@ import pandas as pd
 r1 = 'https://www.rijksmuseum.nl/api/en/collection?key=fakekey&format=json&ps=100&p=page'.replace('fakekey', key)  #returns 340479
 
 
-count = 620#338
+count = 620338
 page = 0
 result = []
 while count > 100:
@@ -32,7 +32,7 @@ while count > 100:
 
 
 df = pd.DataFrame(result)
-df.to_csv('rijksmuseum.csv')
+df.to_csv('rijksmuseum.csv', encoding = 'utf-8')
 
 
 
