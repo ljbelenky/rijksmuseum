@@ -1,51 +1,54 @@
 # https://rijksmuseum.github.io/
-
 from api_key import key
 import requests
 import pandas as pd
+from bs4 import BeautifulSoup
+import urllib.request
+import os
 
+def download_metadata():
+    r1 = 'https://www.rijksmuseum.nl/api/en/collection?key={}&format=json&type=painting&ps=100&p={}'
 
+    count = 620338
+    page = 0
 
-# r1 = 'https://www.rijksmuseum.nl/api/nl/collection?key=fakekey&format=json&type=schilderij&f.normalized32Colors.hex=%20%23367614'.replace('fakekey', key)
-# r1 = 'https://www.rijksmuseum.nl/api/en/collection?key=fakekey&format=json&type=painting&f.normalized32Colors.hex=%20%23367614'.replace('fakekey', key)
-# r1 = 'https://www.rijksmuseum.nl/api/en/collection?key=fakekey&format=json'.replace('fakekey', key) #this one returns count = 620338
-# r1 = 'https://www.rijksmuseum.nl/api/en/collection?key=fakekey&format=json&ps=100&p=20'.replace('fakekey', key)  #returns 340479
+    while count > 0:
+        result = []
+        count -=100
+        page +=1
+        print('Requesting page ',page)
+        r2 = r1.format(key,page)
+        print(r2)
+        response = requests.get(r2)
+        response_dictionary = response.json()
+        art_objects = response_dictionary['artObjects']
+        columns = list(art_objects[0].keys())
 
-r1 = 'https://www.rijksmuseum.nl/api/en/collection?key={}&format=json&ps=100&p={}'
+        for i in art_objects:
+            result.append(list(i.values()))
+        df = pd.DataFrame(result, columns = columns)
+        df.to_csv('rijksmuseum_paintings000{}.csv'.format(page), encoding = 'utf-8')
 
-count = 620338
-page = 0
+def download_image(object_id):
+    base_url = 'https://www.rijksmuseum.nl/en/collection/'
+    # object_id = 'SK-A-389'
+    filename = 'images/{}.jpg'.format(object_id)
+    try:
+        response = requests.get(base_url+object_id)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        img_link = soup.find('meta',{'property':'og:image'})['content']
+        print(img_link)
+        urllib.request.urlretrieve(img_link,filename)
+    except:
+        print('Some sort of error at image download')
 
-while count > 0:
-    result = []
-    count -=100
-    page +=1
-    print('Requesting page ',page)
-    r2 = r1.format(key,page)
-    print(r2)
-    response = requests.get(r2)
-    response_dictionary = response.json()
-    art_objects = response_dictionary['artObjects']
-    columns = list(art_objects[0].keys())
+def get_object_ids():
+    csv_files = [file for file in os.listdir() if '.csv' in file]
 
-    for i in art_objects:
-        result.append(list(i.values()))
-    df = pd.DataFrame(result, columns = columns)
-    df.to_csv('rijksmuseum000{}.csv'.format(page), encoding = 'utf-8')
-#
-#
-#
-#
-# df = pd.DataFrame(result)
-# df.to_csv('rijksmuseum.csv', encoding = 'utf-8')
+    object_ids = []
+    for file in csv_files:
+        df = pd.read_csv(file)
+        if 'objectNumber' in df.columns:
+            object_ids.extend(list(df.objectNumber.values))
 
-
-
-#
-#
-# print(art_objects)
-# print('\n')
-#
-#
-# for i in art_objects:
-#     print(i['webImage'])
+    return object_ids
