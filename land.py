@@ -5,6 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import os
 import shutil
+import urllib
 
 def download_metadata():
     r1 = 'https://www.rijksmuseum.nl/api/en/collection?key={}&format=json&type=painting&ps=100&p={}'
@@ -57,27 +58,36 @@ def find_download_images():
     r1 = 'https://www.rijksmuseum.nl/api/en/collection?key={}&format=json&type=painting&ps=100&p={}'
 
     count = requests.get(r1.format(key,0)).json()['count']
-    page = 0
+    page = 5
 
-    while count > 0:
-        count -=100
+    while True:
         print('*'*10)
         print('working on page {}'.format(page))
         print('*'*10)
         print('Requesting page ',page)
         r2 = r1.format(key,page)
-        page +=1
         print(r2)
         response = requests.get(r2)
         response_dictionary = response.json()
         art_objects = response_dictionary['artObjects']
-        columns = list(art_objects[0].keys())
-        if 'objectNumber' in columns:
-            for i in art_objects:
-                try:
-                    download_image_requests(i['objectNumber'])
-                except:
-                    pass
+        for i in art_objects:
+            web_link = i['links']['web']
+            object_id = i['objectNumber']
+            get_image(web_link, object_id)
+        page +=1
+        if 100*page>count: break
+
+def get_image(web_link, object_id):
+    filename = 'paintings/{}.jpg'.format(object_id)
+
+    response = requests.get(web_link)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    img_link = soup.find('meta',{'property':'og:image'})['content']
+    print(object_id)
+    try:
+        urllib.request.urlretrieve(img_link,filename)
+    except:
+        print('Some sort of error at image download')
 
 def download_image_reqeusts(object_id):
     base_url = 'https://www.rijksmuseum.nl/en/collection/'
@@ -93,6 +103,8 @@ def download_image_reqeusts(object_id):
             with open(filename, 'wb') as f:
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw,f)
+    except:
+        print('Some error in donwload_image_requests')
 
 
 if __name__ == '__main__':
