@@ -3,8 +3,8 @@ from api_key import key
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-import urllib2.request
 import os
+import shutil
 
 def download_metadata():
     r1 = 'https://www.rijksmuseum.nl/api/en/collection?key={}&format=json&type=painting&ps=100&p={}'
@@ -75,9 +75,25 @@ def find_download_images():
         if 'objectNumber' in columns:
             for i in art_objects:
                 try:
-                    download_image(i['objectNumber'])
+                    download_image_requests(i['objectNumber'])
                 except:
                     pass
+
+def download_image_reqeusts(object_id):
+    base_url = 'https://www.rijksmuseum.nl/en/collection/'
+    # object_id = 'SK-A-389'
+    filename = 'paintings/{}.jpg'.format(object_id)
+    try:
+        response = requests.get(base_url+object_id)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        img_link = soup.find('meta',{'property':'og:image'})['content']
+        print(img_link)
+        r = requests.get(img_link, stream = True)
+        if r.status_code == 200:
+            with open(filename, 'wb') as f:
+                r.raw.decode_content = True
+                shutil.copyfileobj(r.raw,f)
+
 
 if __name__ == '__main__':
 	find_download_images()
