@@ -32,7 +32,7 @@ def download_metadata():
 def download_image(object_id):
     base_url = 'https://www.rijksmuseum.nl/en/collection/'
     # object_id = 'SK-A-389'
-    filename = 'images/{}.jpg'.format(object_id)
+    filename = 'paintings/{}.jpg'.format(object_id)
     try:
         response = requests.get(base_url+object_id)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -52,3 +52,29 @@ def get_object_ids():
             object_ids.extend(list(df.objectNumber.values))
 
     return object_ids
+
+def find_download_images():
+    r1 = 'https://www.rijksmuseum.nl/api/en/collection?key={}&format=json&type=painting&ps=100&p={}'
+
+    count = requests.get(r1.format(key,0)).json()['count']
+    page = 0
+
+    while count > 0:
+        count -=100
+        print('*'*10)
+        print('working on page {}'.format(page))
+        print('*'*10)
+        print('Requesting page ',page)
+        r2 = r1.format(key,page)
+        page +=1
+        print(r2)
+        response = requests.get(r2)
+        response_dictionary = response.json()
+        art_objects = response_dictionary['artObjects']
+        columns = list(art_objects[0].keys())
+        if 'objectNumber' in columns:
+            for i in art_objects:
+                try:
+                    download_image(i['objectNumber'])
+                except:
+                    pass
